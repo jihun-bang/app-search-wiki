@@ -71,7 +71,7 @@ object NetworkModule {
 
             Log.e(
                 "BJH",
-                "[NetworkModule][getResponse] responseCode=$responseCode\ncontent=$content"
+                "[NetworkModule][getResponse] method=$method responseCode=$responseCode\ncontent=$content"
             )
             when (connection) {
                 is HttpURLConnection -> connection.disconnect()
