@@ -41,11 +41,6 @@ object NetworkModule {
 
     private fun getResponse(connection: URLConnection, method: String, postData: String): String? {
         return try {
-            val responseCode = when (connection) {
-                is HttpURLConnection -> connection.responseCode
-                is HttpsURLConnection -> connection.responseCode
-                else -> null
-            }
             if (method != "GET") {
                 connection.doOutput = true
                 connection.doInput = true
@@ -55,23 +50,34 @@ object NetworkModule {
                 outputStream.close()
             }
 
-            val streamReader = InputStreamReader(connection.inputStream)
-            val buffered = BufferedReader(streamReader)
-            val content = StringBuilder()
-            while (true) {
-                val line = buffered.readLine() ?: break
-                content.append(line)
+            val (responseCode, responseMessage) = when (connection) {
+                is HttpURLConnection -> connection.responseCode to connection.responseMessage
+                is HttpsURLConnection -> connection.responseCode to connection.responseMessage
+                else -> return null
+            }
+            val content = if (responseCode == HttpURLConnection.HTTP_OK) {
+                val streamReader = InputStreamReader(connection.inputStream)
+                val buffered = BufferedReader(streamReader)
+                val content = StringBuilder()
+                while (true) {
+                    val line = buffered.readLine() ?: break
+                    content.append(line)
+                }
+                buffered.close()
+                content.toString()
+            } else {
+                responseMessage
             }
 
-            buffered.close()
-
+            Log.e(
+                "BJH",
+                "[NetworkModule][getResponse] responseCode=$responseCode\ncontent=$content"
+            )
             when (connection) {
                 is HttpURLConnection -> connection.disconnect()
                 is HttpsURLConnection -> connection.disconnect()
             }
-            content.toString().apply {
-                Log.e("BJH", "[NetworkModule][getResponse] responseCode=$responseCode\ncontent=$this")
-            }
+            content
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -91,6 +97,13 @@ object NetworkModule {
             e.printStackTrace()
             null
         }
+    }
+
+    fun readStream(inputStream: BufferedInputStream): String {
+        val bufferedReader = BufferedReader(InputStreamReader(inputStream))
+        val stringBuilder = StringBuilder()
+        bufferedReader.forEachLine { stringBuilder.append(it) }
+        return stringBuilder.toString()
     }
 }
 
